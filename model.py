@@ -134,27 +134,34 @@ class model(Chain):
             self.conv0 = GCN(3, 64)
             for i in range(1, 6):
                 self.add_link(f"conv{i}", reduction(2**i*32, 2**i*64))
-            self.dc0 = decoder(64, 3, 64)
-            for i in range(1, 6):
+            self.inception = Inception(2048, 2048)
+
+            # self.dc0 = decoder(64, 3, 64)
+            for i in range(6):
                 self.add_link(f"dc{i}", decoder(2**i*64, 2**i*64, 2**i*64))
             
-            self.inception = Inception(2048, 2048)
+            self.conv_ = L.Convolution2D(64, 3, ksize=1)
             
     
     def __call__(self, x):
+        shape = [x.shape]
         h = self.conv0(x)
+        shape.append(h.shape)
         h = F.leaky_relu(h)
         h_ = [h]
 
         for i in range(1, 6):
             h = self[f"conv{i}"](h)
             h_.append(h)
+            shape.append(h.shape)
 
         for i in range(5):
             h = self.inception(h)
         
         for i in range(5,-1,-1):
-            h = self[f"dc{i}"](h, h_[i])
+            h = self[f"dc{i}"](h, h_[i])[:,:,1:shape[i][2],1:shape[i][3]]
         
+        h = self.conv_(h)
+
         return h
 
