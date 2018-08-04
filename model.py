@@ -29,7 +29,7 @@ class Down(Chain):
         h = F.relu(h)
         h = self.conv2(h)
         h = F.relu(h)
-        h = F.max_pooling_2d(h, 2)
+        h = F.max_pooling_2d(h, 2, pad=(x.shape[2]%2, x.shape[3]%2))
         return h
 
 class Up(Chain):
@@ -40,7 +40,7 @@ class Up(Chain):
             self.conv2 = L.Convolution2D(out_channels, out_channels, ksize=3, pad=1)
     
     def __call__(self, x0, x1):
-        h = F.concat(x1, pixelShuffler(x1, 2))
+        h = F.concat(x0, pixelShuffler(x1, 2)[:,:,x0.shape[1]%2:,x0.shape[1]%2:])
         h = self.conv1(h)
         h = F.relu(h)
         h = self.conv2(h)
@@ -69,12 +69,24 @@ class model(Chain):
             self.up6 = Up(48, 32)
 
             self.conv = L.Convolution2D(32, 3, ksize=1)
-
-            
     
     def __call__(self, x):
         h0 = self.down0(x)
         h1 = self.down1(h0)
+        h2 = self.down2(h1)
+        h3 = self.down3(h2)
+        h4 = self.down4(h3)
+        h5 = self.down5(h4)
+        h6 = self.down6(h5)
+        h7 = self.down7(h6)
 
+        h = self.up0(h6, h7)
+        h = self.up1(h5, h)
+        h = self.up2(h4, h)
+        h = self.up3(h3, h)
+        h = self.up4(h2, h)
+        h = self.up5(h1, h)
+        h = self.up6(h0, h)
+        h = self.conv(h)
         return h
 
