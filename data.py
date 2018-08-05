@@ -3,14 +3,14 @@ import cupy as cp
 import cv2
 
 
-class img:
+class Img:
     def __init__(self, path):
         self.image = cv2.imread(path)
     
     def noise(self):
         pass
 
-class data:
+class Data:
     def __init__(self):
         pass
 
