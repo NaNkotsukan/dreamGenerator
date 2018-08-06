@@ -4,14 +4,14 @@ import cv2
 import time
 
 class RandomFigure:
-    def __init__(self):
+    def __init__(self, r=700, l=500):
         self.img = np.zeros((512,512), np.uint8)
         # self.img = self.random()
         for i in range(np.random.randint(4, 7)):
             self.img = self.random(img=self.img)
-        self.rows = np.random.randint(700)
-        self.cols = 500 - self.rows + np.random.randint(400)
-        self.img = cv2.resize(self.img , (self.rows, self.cols))
+        self.rows = np.random.randint(r)
+        self.cols = np.random.randint(l)
+        self.img = cv2.resize(self.img , (self.cols, self.rows))
         
     def random(self, img):
         a = np.random.rand()
@@ -37,37 +37,44 @@ class RandomFigure:
 
 class Mosaic(RandomFigure):
     def __init__(self, image):
-        super().__init__()
-        self.image = image
         self.imageRows, self.imageCols = image.shape[:2]
+        super().__init__(r=self.imageRows, l=self.imageCols)
+        self.image = image
         self.x = np.random.randint(self.imageRows - self.rows)
         self.y = np.random.randint(self.imageCols - self.cols)
+    
+    def saveImage(self, filename="hoge"):
+        cv2.imwrite(filename, self.image)
 
 class BlockMosaic(Mosaic):
     def __init__(self, image):
         super().__init__(image)
 
     def makeMosaic(self, k):
-        a = cv2.resize(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols], (self.imageRows//k, self.imageCols//k))
-        self.b = (self.imageRows//k*k, self.imageCols//k*k)
-        self.mosaic = cv2.resize(a, self.b)
+        a = cv2.resize(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols], (max(self.cols//k, 1), max(self.rows//k, 1)), interpolation=np.random.choice([3, 5, 10, 2, 4, 1, 0]))
+        self.b = (self.cols//k*k, self.rows//k*k)
+        self.mosaic = cv2.resize(a, self.b, interpolation=cv2.INTER_NEAREST)
+        
 
     def setMosaic(self):
-        self.image[self.x:self.x+self.b[0], self.y:self.y+self.b[1]][self.img==255] = self.mosaic[self.img[:self.b[0],:self.b[1]]==255]
+        a = self.img[:self.b[1],:self.b[0]]>128
+        self.image[self.x:self.x+self.b[1], self.y:self.y+self.b[0]][a] = self.mosaic[a]
+        # self.image[self.x:self.x+self.b[1], self.y:self.y+self.b[0]] = self.mosaic
 
 class AverageMosaic(Mosaic):
     def __init__(self, image):
-        super().__init__()
+        super().__init__(image)
 
     def makeMosaic(self, k):
         self.mosaic = cv2.blur(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols], (k, k))
 
     def setMosaic(self):
-        self.image[self.x:self.x+self.rows, self.y:self.y+self.cols][self.img==255] = self.mosaic[self.img==255]
+        a = self.img > 127
+        self.image[self.x:self.x+self.rows, self.y:self.y+self.cols][a] = self.mosaic[a]
 
 class WatermarkMosaic(Mosaic):
     def __init__(self, image):
-        super().__init__()
+        super().__init__(image)
 
     def makeMosaic(self, b):
         self.mosaic = np.clip(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols].astype(np.uint16)+np.array(b), 0, 255).astype(np.uint8)
@@ -78,9 +85,12 @@ class WatermarkMosaic(Mosaic):
 
 def main():
     t = time.time()
-    for i in range(10):
-        x = RandomFigure()
-        x.save(f"{i}.png")
+    img = cv2.imread("_.jpg")
+    for i in range(1, 10):
+        x = BlockMosaic(img)
+        x.makeMosaic(i*3)
+        x.setMosaic()
+        x.saveImage(f"{i}.png")
     print(time.time()-t)
 
 if __name__ == '__main__':
