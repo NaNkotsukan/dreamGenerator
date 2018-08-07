@@ -47,9 +47,9 @@ class Up(Chain):
         h = F.relu(h)
         return h
 
-class model(Chain):
+class Model(Chain):
     def __init__(self):
-        super(model, self).__init__()
+        super(Model, self).__init__()
         with self.init_scope():
             self.down0 = Down(3, 32)
             self.down1 = Down(32, 64)

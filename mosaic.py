@@ -17,18 +17,18 @@ class RandomFigure:
         a = np.random.rand()
         if (a < 0.5):
             x = np.random.randint(10, 110)
-            return cv2.ellipse(img,(np.random.randint(100,412),np.random.randint(100,412)),(x,170-x+np.random.randint(30)),np.random.randint(360),0,360,255,-1)
+            return cv2.ellipse(img,(np.random.randint(50,462),np.random.randint(50,462)),(x,170-x+np.random.randint(30)),np.random.randint(360),0,360,255,-1)
             # return cv2.ellipse(img,(256,256),(100,50),0,0,180,255,-1)
         elif(a < 0.8):
             x = np.random.randint(10, 110)
-            img = cv2.rectangle(img,(np.random.randint(100,412),np.random.randint(100,412)),(x,170-x+np.random.randint(30)),255, -1)
+            img = cv2.rectangle(img,(np.random.randint(50,462),np.random.randint(50,462)),(x,170-x+np.random.randint(30)),255, -1)
             M = cv2.getRotationMatrix2D((256, 256),np.random.randint(360),1)
             return cv2.warpAffine(img,M,(512,512))
             # return cv2.rectangle(img,(384,0),(510,128),255,3)
         else:
             font = [cv2.FONT_HERSHEY_COMPLEX, cv2.FONT_HERSHEY_COMPLEX_SMALL, cv2.FONT_HERSHEY_DUPLEX, cv2.FONT_HERSHEY_PLAIN, cv2.FONT_HERSHEY_SCRIPT_COMPLEX, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, cv2.FONT_HERSHEY_SIMPLEX, cv2.FONT_HERSHEY_TRIPLEX, cv2.FONT_ITALIC][np.random.randint(9)]
             txt = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[np.random.randint(52)]
-            img = cv2.putText(img, txt, (np.random.randint(100,412),np.random.randint(100,412)), font, 3 + np.random.randint(15), 255, 2 + np.random.randint(40), cv2.LINE_AA, True)
+            img = cv2.putText(img, txt, (np.random.randint(50,462),np.random.randint(50,462)), font, 3 + np.random.randint(15), 255, 2 + np.random.randint(40), cv2.LINE_AA, True)
             M = cv2.getRotationMatrix2D((256, 256),np.random.randint(360),1)
             return cv2.warpAffine(img,M,(512,512))
 
@@ -50,11 +50,13 @@ class BlockMosaic(Mosaic):
     def __init__(self, image):
         super().__init__(image)
 
+    def make(self):
+        self.makeMosaic(np.random.randint(40))
+
     def makeMosaic(self, k):
         a = cv2.resize(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols], (max(self.cols//k, 1), max(self.rows//k, 1)), interpolation=np.random.choice([3, 5, 10, 2, 4, 1, 0]))
         self.b = (self.cols//k*k, self.rows//k*k)
         self.mosaic = cv2.resize(a, self.b, interpolation=cv2.INTER_NEAREST)
-        
 
     def setMosaic(self):
         a = self.img[:self.b[1],:self.b[0]]>128
@@ -64,6 +66,9 @@ class BlockMosaic(Mosaic):
 class AverageMosaic(Mosaic):
     def __init__(self, image):
         super().__init__(image)
+
+    def make(self):
+        self.makeMosaic(np.random.randint(40))
 
     def makeMosaic(self, k):
         self.mosaic = cv2.blur(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols], (k, k))
@@ -75,6 +80,9 @@ class AverageMosaic(Mosaic):
 class WatermarkMosaic(Mosaic):
     def __init__(self, image):
         super().__init__(image)
+    
+    def make(self):
+        self.makeMosaic(np.random.randint(-120, 120, 3))
 
     def makeMosaic(self, b):
         self.mosaic = np.clip(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols].astype(np.uint16)+np.array(b), 0, 255).astype(np.uint8)
@@ -87,8 +95,8 @@ def main():
     t = time.time()
     img = cv2.imread("_.jpg")
     for i in range(1, 10):
-        x = BlockMosaic(img)
-        x.makeMosaic(i*3)
+        x = WatermarkMosaic(img)
+        x.make()
         x.setMosaic()
         x.saveImage(f"{i}.png")
     print(time.time()-t)
