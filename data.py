@@ -14,7 +14,7 @@ class Img:
     
     def noise(self, n):
         noiseList = [[BlockMosaic, AverageMosaic, WatermarkMosaic][np.random.randint(3)](self.x) for i in range(n)]
-        [x.result() for x in [self.pool.submit(x.make()) for x in noiseList]]
+        [x.result() for x in [self.pool.submit(x.make) for x in noiseList]]
         [x.setMosaic() for x in noiseList]
 
     def __getstate__(self):
@@ -38,7 +38,7 @@ class Data:
     def genImg(self):
         while True:
             for i in np.random.permutation(len(self.imgList)):
-                yield self.imgList[i]
+                yield self.path+self.imgList[i]
             print("-------------------------------------------------")
     
     def __getstate__(self):
@@ -51,15 +51,15 @@ class Data:
         self.__dict__.update(state)
         self.getImg = self.genImg()
     
-    def load(self, m, n):
-        img = [Img(next(self.getImg), self.pool) for _ in range(m)]
+    def load(self, n):
+        img = [Img(next(self.getImg), self.pool) for _ in range(n)]
         x = []
         y = []
         for a in img:
             a.noise(int(np.abs(np.random.normal(0, 2)))+1)
-            x.append(a.x)
-            y.append(a.y)
-        return np.vstack(x), np.vstack(y)
+            x.append(a.x.reshape((1,)+a.x.shape))
+            y.append(a.y.reshape((1,)+a.x.shape))
+        return cp.transpose(cp.vstack(x), (0, 3, 1, 2)).astype(cp.float32)/255, cp.transpose(cp.vstack(y), (0, 3, 1, 2)).astype(cp.float32)/255
 
 
 def main():

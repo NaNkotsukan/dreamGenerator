@@ -2,6 +2,8 @@ import numpy as np
 import cupy as cp
 import cv2
 import time
+from concurrent.futures import ThreadPoolExecutor as Pool
+from copy import deepcopy
 
 class RandomFigure:
     def __init__(self, r=700, l=500):
@@ -9,8 +11,8 @@ class RandomFigure:
         # self.img = self.random()
         for i in range(np.random.randint(4, 7)):
             self.img = self.random(img=self.img)
-        self.rows = np.random.randint(r)
-        self.cols = np.random.randint(l)
+        self.rows = np.random.randint(2, r)
+        self.cols = np.random.randint(2, l)
         self.img = cv2.resize(self.img , (self.cols, self.rows))
         
     def random(self, img):
@@ -51,16 +53,25 @@ class BlockMosaic(Mosaic):
         super().__init__(image)
 
     def make(self):
-        self.makeMosaic(np.random.randint(40))
+        self.makeMosaic(np.random.randint(2, 40))
 
     def makeMosaic(self, k):
         a = cv2.resize(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols], (max(self.cols//k, 1), max(self.rows//k, 1)), interpolation=np.random.choice([3, 5, 10, 2, 4, 1, 0]))
-        self.b = (self.cols//k*k, self.rows//k*k)
+        self.b = (max(self.cols//k, 1)*k, max(self.rows//k, 1)*k)
         self.mosaic = cv2.resize(a, self.b, interpolation=cv2.INTER_NEAREST)
 
     def setMosaic(self):
         a = self.img[:self.b[1],:self.b[0]]>128
-        self.image[self.x:self.x+self.b[1], self.y:self.y+self.b[0]][a] = self.mosaic[a]
+        # print(">----------")
+        # print(self.b)
+        # print(a.shape)
+        # print(self.mosaic.shape)
+        # print(self.image[self.x:self.x+self.b[1], self.y:self.y+self.b[0]].shape)
+        # print("----------<")
+        x = min(self.b[1], a.shape[0])
+        y = min(self.b[0], a.shape[1])
+        self.image[self.x:self.x+x, self.y:self.y+y][a[:x,:y]] = self.mosaic[:x,:y][a[:x,:y]]
+        
         # self.image[self.x:self.x+self.b[1], self.y:self.y+self.b[0]] = self.mosaic
 
 class AverageMosaic(Mosaic):
@@ -68,7 +79,7 @@ class AverageMosaic(Mosaic):
         super().__init__(image)
 
     def make(self):
-        self.makeMosaic(np.random.randint(40))
+        self.makeMosaic(np.random.randint(2, 40))
 
     def makeMosaic(self, k):
         self.mosaic = cv2.blur(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols], (k, k))
