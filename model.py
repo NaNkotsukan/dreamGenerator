@@ -1,7 +1,8 @@
 import chainer.functions as F
 import chainer.links as L
-from chainer import Chain, optimizers
+from chainer import Chain, optimizers, initializers
 from chainer import Variable as V
+import numpy as np
 import cupy as xp
 
 def pixelShuffler(x, r):
@@ -18,11 +19,11 @@ def pixelShuffler(x, r):
     return h
 
 class Down(Chain):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, W, bias):
         super(Down, self).__init__()
         with self.init_scope():
-            self.conv1 = L.Convolution2D(in_channels, out_channels, ksize=3, pad=1)
-            self.conv2 = L.Convolution2D(out_channels, out_channels, ksize=3, pad=1)
+            self.conv1 = L.Convolution2D(in_channels, out_channels, ksize=3, pad=1, initialW=W, initial_bias=bias)
+            self.conv2 = L.Convolution2D(out_channels, out_channels, ksize=3, pad=1, initialW=W, initial_bias=bias)
     
     def __call__(self, x):
         h = F.max_pooling_2d(x, 2)
@@ -33,11 +34,11 @@ class Down(Chain):
         return h
 
 class Up(Chain):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, W, bias):
         super(Up, self).__init__()
         with self.init_scope():
-            self.conv1 = L.Convolution2D(in_channels, out_channels, ksize=3, pad=1)
-            self.conv2 = L.Convolution2D(out_channels, out_channels, ksize=3, pad=1)
+            self.conv1 = L.Convolution2D(in_channels, out_channels, ksize=3, pad=1, initialW=W, initial_bias=bias)
+            self.conv2 = L.Convolution2D(out_channels, out_channels, ksize=3, pad=1, initialW=W, initial_bias=bias)
     
     def __call__(self, x0, x1):
         h = F.concat((x0, pixelShuffler(x1, 2)[:,:,:x0.shape[2],:x0.shape[3]]))
@@ -51,28 +52,31 @@ class Model(Chain):
     def __init__(self):
         super(Model, self).__init__()
         with self.init_scope():
+            W = initializers.HeNormal(1 / np.sqrt(2), np.float16)
+            bias = initializers.Zero(np.float16)
             n = 32
-            self.down0 = Down(n, n*2)
-            self.down1 = Down(n*2, n*4)
-            self.down2 = Down(n*4, n*8)
-            self.down3 = Down(n*8, n*16)
-            self.down4 = Down(n*16, n*24)
-            self.down5 = Down(n*24, n*32)
-            self.down6 = Down(n*32, n*32)
-            self.down7 = Down(n*32, n*32)
 
-            self.up0 = Up(n*40, n*32)
-            self.up1 = Up(n*40, n*32)
-            self.up2 = Up(n*32, n*24)
-            self.up3 = Up(n*22, n*16)
-            self.up4 = Up(n*12, n*8)
-            self.up5 = Up(n*6, n*4)
-            self.up6 = Up(n*3, n*2)
-            self.up7 = Up(n//2+n, 32)
+            self.down0 = Down(n, n*2, W, bias)
+            self.down1 = Down(n*2, n*4, W, bias)
+            self.down2 = Down(n*4, n*8, W, bias)
+            self.down3 = Down(n*8, n*16, W, bias)
+            self.down4 = Down(n*16, n*24, W, bias)
+            self.down5 = Down(n*24, n*32, W, bias)
+            self.down6 = Down(n*32, n*32, W, bias)
+            self.down7 = Down(n*32, n*32, W, bias)
 
-            self.conv0 = L.Convolution2D(3, 32, ksize=3, pad=1)
-            self.conv1 = L.Convolution2D(32, 32, ksize=3, pad=1)
-            self.conv = L.Convolution2D(32, 3, ksize=1)
+            self.up0 = Up(n*40, n*32, W, bias)
+            self.up1 = Up(n*40, n*32, W, bias)
+            self.up2 = Up(n*32, n*24, W, bias)
+            self.up3 = Up(n*22, n*16, W, bias)
+            self.up4 = Up(n*12, n*8, W, bias)
+            self.up5 = Up(n*6, n*4, W, bias)
+            self.up6 = Up(n*3, n*2, W, bias)
+            self.up7 = Up(n//2+n, 32, W, bias)
+
+            self.conv0 = L.Convolution2D(3, 32, ksize=3, pad=1, initialW=W, initial_bias=bias)
+            self.conv1 = L.Convolution2D(32, 32, ksize=3, pad=1, initialW=W, initial_bias=bias)
+            self.conv = L.Convolution2D(32, 3, ksize=1, initialW=W, initial_bias=bias)
     
     def __call__(self, x):
         h = self.conv0(x)

@@ -6,13 +6,13 @@ from concurrent.futures import ThreadPoolExecutor as Pool
 from copy import deepcopy
 
 class RandomFigure:
-    def __init__(self, r=700, l=500):
+    def __init__(self, r=700, l=500, k=2):
         self.img = np.zeros((512,512), np.uint8)
         # self.img = self.random()
         for i in range(np.random.randint(4, 7)):
             self.img = self.random(img=self.img)
-        self.rows = np.random.randint(2, r)
-        self.cols = np.random.randint(2, l)
+        self.rows = np.random.randint(k, r)
+        self.cols = np.random.randint(k, l)
         self.img = cv2.resize(self.img , (self.cols, self.rows))
         
     def random(self, img):
@@ -55,9 +55,25 @@ class BlockMosaic(Mosaic):
     def make(self):
         self.makeMosaic(np.random.randint(2, 40))
 
+    # def makeMosaic(self, k):
+    #     a = 0
+    #     try:
+    #         a = cv2.resize(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols], (max(self.cols//k, 1), max(self.rows//k, 1)), interpolation=np.random.choice([3, 5, 10, 2, 4, 1, 0]))
+    #     except:
+    #         print(self.x,self.rows, self.y, self.cols)
+    #         print(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols].shape)
+    #     self.b = (max(self.cols//k, 1)*k, max(self.rows//k, 1)*k)
+    #     self.mosaic = cv2.resize(a, self.b, interpolation=cv2.INTER_NEAREST)
+
     def makeMosaic(self, k):
-        a = cv2.resize(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols], (max(self.cols//k, 1), max(self.rows//k, 1)), interpolation=np.random.choice([3, 5, 10, 2, 4, 1, 0]))
-        self.b = (max(self.cols//k, 1)*k, max(self.rows//k, 1)*k)
+        a = 0
+        try:
+            self.b = (max(self.cols//k, 1)*k, max(self.rows//k, 1)*k)
+            a = cv2.resize(self.image[self.x:self.x+self.b[1], self.y:self.y+self.b[0]], (max(self.cols//k, 1), max(self.rows//k, 1)), interpolation=np.random.choice([3, 5, 10, 2, 4, 1, 0]))
+        except Exception as e:
+            print("setMosaic", e)
+            print(self.x,self.rows, self.y, self.cols)
+            print(self.image[self.x:self.x+self.rows, self.y:self.y+self.cols].shape)
         self.mosaic = cv2.resize(a, self.b, interpolation=cv2.INTER_NEAREST)
 
     def setMosaic(self):
@@ -70,7 +86,10 @@ class BlockMosaic(Mosaic):
         # print("----------<")
         x = min(self.b[1], a.shape[0])
         y = min(self.b[0], a.shape[1])
-        self.image[self.x:self.x+x, self.y:self.y+y][a[:x,:y]] = self.mosaic[:x,:y][a[:x,:y]]
+        try:
+            self.image[self.x:self.x+x, self.y:self.y+y][a[:x,:y]] = self.mosaic[:x,:y][a[:x,:y]]
+        except Exception as e:
+            print("setMosaic", e)
         
         # self.image[self.x:self.x+self.b[1], self.y:self.y+self.b[0]] = self.mosaic
 

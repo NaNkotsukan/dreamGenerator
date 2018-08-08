@@ -9,6 +9,7 @@ from copy import deepcopy
 class Img:
     def __init__(self, path, pool):
         self.y = cv2.imread(path)
+        self.path = path
         self.x = deepcopy(self.y)
         self.pool = pool
     
@@ -56,10 +57,10 @@ class Data:
         x = []
         y = []
         for a in img:
-            a.noise(int(np.abs(np.random.normal(0, 2)))+1)
+            a.noise(int(np.abs(np.random.normal(0, 2)))+2)
             x.append(a.x.reshape((1,)+a.x.shape))
             y.append(a.y.reshape((1,)+a.x.shape))
-        return cp.transpose(cp.vstack(x), (0, 3, 1, 2)).astype(cp.float32)/255, cp.transpose(cp.vstack(y), (0, 3, 1, 2)).astype(cp.float32)/255
+        return cp.transpose(cp.vstack(x), (0, 3, 1, 2)).astype(cp.float16)/255, cp.transpose(cp.vstack(y), (0, 3, 1, 2)).astype(cp.float16)/255
 
 
 def main():
